@@ -1,74 +1,202 @@
-# AI 赋能的智能简历分析系统
+# AI Powered Resume Analysis System
 
-一个面向招聘筛选场景的全栈 MVP：支持上传 PDF 简历、解析文本、提取关键信息、根据岗位 JD 进行匹配评分，并在前端展示多维度雷达图和缺失技能。
+AI 赋能的智能简历分析系统。项目面向招聘筛选场景，支持 PDF 简历上传、文本解析、关键信息提取、岗位 JD 语义匹配、多维度评分、缺失技能分析、用户登录和历史记录查看。
 
-## 功能清单
-
-- 单个 PDF 简历上传
-- 多页 PDF 文本提取
-- 简历文本清洗与结构化
-- 姓名、电话、邮箱、地址等基本信息提取
-- 求职意向、期望薪资、工作年限、学历、项目、技能关键词提取
-- 岗位 JD 文本输入
-- 简历与 JD 匹配评分
-- 技能匹配率、经验相关性、学历匹配、项目相关、关键词覆盖五维评分
-- 多维度雷达图
-- 缺失技能模块
-- 接入 AI 后支持语义归一化、逐条 JD 要求匹配、证据引用和缺失技能重要性
-- 文件缓存，避免重复解析和重复评分
-- AI 调用接口预留，无 API Key 时自动使用规则兜底
-- JD URL 解析接口预留，MVP 阶段暂不启用
-- 用户注册与登录
-- SQLite 保存用户信息和匹配历史
-- 用户可查看历史匹配记录：姓名、联系方式、岗位、匹配分数
-
-## 技术栈
-
-后端：
-
-- Python 3.9+
-- FastAPI
-- PyMuPDF
-- Pydantic
-- SQLite
-- OpenAI-compatible API 预留
-- Redis 预留，本地文件缓存兜底
-
-前端：
-
-- Vite
-- React
-- TypeScript
-- Axios
-- SVG 自绘雷达图
-
-## 项目结构
+线上前端地址：
 
 ```txt
-resume-ai-system/
+https://boyazhang54.github.io/AI_powered_resume_system/
+```
+
+后端服务部署在阿里云函数计算 FC：
+
+```txt
+https://resume-i-system-nzvfhfnbdd.cn-hangzhou.fcapp.run
+```
+
+## 项目架构
+
+本项目采用前后端分离架构：
+
+```txt
+用户浏览器
+  -> GitHub Pages 前端
+  -> 阿里云函数计算 FC 后端
+  -> PDF 解析 / AI 模型调用 / SQLite / 缓存
+```
+
+核心目录结构：
+
+```txt
+AI_powered_resume_system/
   backend/
     app/
-      api/
-      schemas/
-      services/
+      api/          # REST API：认证、简历解析、匹配历史
+      schemas/      # Pydantic 请求和响应模型
+      services/     # PDF 解析、AI 调用、评分、缓存、数据库
       utils/
-      main.py
+      main.py       # FastAPI 入口
     requirements.txt
     .env.example
   frontend/
     src/
-      components/
-      App.tsx
-      api.ts
+      components/   # 雷达图等组件
+      App.tsx       # 页面主逻辑
+      api.ts        # 后端 API 封装
       types.ts
-      styles.css
     package.json
-    .env.example
+  .github/workflows/
+    deploy-frontend.yml
+  README.md
+```
+
+后端主要流程：
+
+```txt
+PDF 上传
+  -> PyMuPDF 提取多页文本
+  -> 文本清洗
+  -> AI/规则抽取简历信息
+  -> 输入岗位 JD
+  -> AI 语义匹配 + 规则评分
+  -> 返回 JSON 结果
+  -> 保存匹配历史
+```
+
+前端主要流程：
+
+```txt
+登录/注册
+  -> 上传 PDF
+  -> 查看简历结构化信息
+  -> 输入 JD
+  -> 查看综合评分、雷达图、缺失技能、语义匹配证据
+  -> 查看历史记录
+```
+
+## 技术选型
+
+后端：
+
+- Python 3.10
+- FastAPI：提供 RESTful API
+- PyMuPDF：解析 PDF 简历文本，支持多页 PDF
+- Pydantic：定义结构化请求和响应模型
+- SQLite：保存用户信息和匹配历史
+- OpenAI-compatible API：接入 DeepSeek / Qwen / OpenAI 兼容模型
+- 本地文件缓存：缓存简历解析和匹配结果
+- Redis：已预留接口，生产环境可替换本地缓存
+
+前端：
+
+- React
+- TypeScript
+- Vite
+- Axios
+- SVG 自绘雷达图
+- GitHub Pages 自动部署
+
+部署：
+
+- 后端：阿里云函数计算 FC
+- 前端：GitHub Pages
+- AI 模型：DeepSeek API，兼容其他 OpenAI-compatible 服务
+
+## 功能说明
+
+已实现功能：
+
+- 用户注册与登录
+- PDF 简历上传和解析
+- 简历关键信息提取：姓名、电话、邮箱、地址、技能、学历、项目经历等
+- 岗位 JD 文本输入
+- AI 语义匹配评分
+- 多维度雷达图评估
+- 缺失技能分析
+- 语义匹配证据展示
+- 匹配历史记录：姓名、联系方式、岗位、匹配分数
+- 缓存机制：避免相同简历和 JD 重复计算
+
+预留能力：
+
+- JD URL 解析接口
+- Redis 缓存
+- OCR 解析扫描版 PDF
+- 批量简历上传和排序
+- 导出分析报告
+
+## AI 评分逻辑
+
+系统采用“规则基础分 + AI 语义评分”的混合评分方式。
+
+综合分权重：
+
+```txt
+综合分 =
+技能匹配 * 35%
++ 经验相关 * 25%
++ 项目相关 * 20%
++ 学历匹配 * 10%
++ 关键词覆盖 * 10%
+```
+
+接入 AI 后，模型会输出结构化 JSON，用于：
+
+- 将“AI API”“大模型接口”“LLM API”等相近表达归一化为同一能力项
+- 逐条判断 JD 要求是否被简历证据满足
+- 给出匹配等级：强匹配、部分匹配、弱匹配、未匹配
+- 给出缺失技能、重要性和原因
+- 生成中文分析总结
+
+如果 AI API 调用失败，系统会自动回退到规则评分，保证基础功能可用。
+
+## 数据库设计
+
+MVP 阶段使用 SQLite，数据库文件默认由环境变量 `DATABASE_PATH` 指定。
+
+主要存储：
+
+- 用户信息：用户名、密码哈希、创建时间
+- 匹配历史：用户 ID、简历 ID、候选人姓名、联系方式、岗位名称、匹配分数、分析模式、创建时间
+
+说明：
+
+- 密码不会明文存储，使用 PBKDF2 哈希。
+- 当前 SQLite 适合 MVP 演示；生产环境建议迁移到阿里云 RDS / PolarDB。
+
+## 后端 API
+
+认证：
+
+```http
+POST /api/auth/register
+POST /api/auth/login
+GET  /api/auth/me
+```
+
+简历：
+
+```http
+POST /api/resumes/parse
+GET  /api/resumes/{resume_id}
+POST /api/resumes/{resume_id}/match
+```
+
+历史记录：
+
+```http
+GET /api/history
+```
+
+健康检查：
+
+```http
+GET /api/health
 ```
 
 ## 本地运行
 
-### 1. 启动后端
+### 后端
 
 ```bash
 cd backend
@@ -79,19 +207,14 @@ copy .env.example .env
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-健康检查：
+访问：
 
 ```txt
 http://localhost:8000/api/health
-```
-
-API 文档：
-
-```txt
 http://localhost:8000/docs
 ```
 
-### 2. 启动前端
+### 前端
 
 ```bash
 cd frontend
@@ -100,251 +223,108 @@ copy .env.example .env
 npm run dev
 ```
 
-默认访问：
+访问：
 
 ```txt
 http://localhost:5173
 ```
 
-## 环境变量
-
-后端 `backend/.env`：
+前端本地环境变量：
 
 ```env
-APP_NAME=Resume AI Analyzer
-APP_ENV=local
-ALLOWED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
+VITE_API_BASE_URL=http://localhost:8000
+```
 
-AI_PROVIDER=openai_compatible
-AI_BASE_URL=https://api.openai.com/v1
-AI_API_KEY=
-AI_MODEL=gpt-4o-mini
+## 部署方式
 
-REDIS_URL=
-CACHE_DIR=.cache
-DATABASE_PATH=resume_ai.db
+### 后端部署到阿里云函数计算 FC
+
+后端使用 FastAPI Web 服务方式部署。
+
+关键配置：
+
+```txt
+运行环境：Python 3.10
+监听端口：9000
+启动方式：bash bootstrap
+```
+
+`bootstrap` 中启动 FastAPI：
+
+```bash
+python3 -m uvicorn app.main:app --host 0.0.0.0 --port "${FC_SERVER_PORT:-9000}"
+```
+
+FC 环境变量示例：
+
+```env
+AI_BASE_URL=https://api.deepseek.com/v1
+AI_API_KEY=your_api_key
+AI_MODEL=deepseek-chat
+ALLOWED_ORIGINS=https://boyazhang54.github.io
+DATABASE_PATH=/tmp/resume_ai.db
+CACHE_DIR=/tmp/.cache
 AUTH_SECRET=please-change-this-secret
 TOKEN_EXPIRE_HOURS=24
 ```
 
 说明：
 
-- `AI_API_KEY` 为空时，系统使用规则提取和规则评分。
-- 如果接入通义千问、DeepSeek、Moonshot 等兼容 OpenAI API 的模型，修改 `AI_BASE_URL`、`AI_API_KEY`、`AI_MODEL` 即可。
-- `REDIS_URL` 为空时，默认使用本地文件缓存。
-- `DATABASE_PATH` 是 SQLite 数据库文件路径，默认保存用户和历史记录。
-- `AUTH_SECRET` 用于签名登录 token，部署时必须改成随机长字符串。
+- `.env` 不上传到 GitHub，也不打包到部署包中。
+- API Key 应配置在阿里云 FC 环境变量中。
+- FC 中的 `/tmp` 是临时存储，生产环境建议使用 RDS 保存用户和历史记录。
 
-前端 `frontend/.env`：
+### 前端部署到 GitHub Pages
 
-```env
-VITE_API_BASE_URL=http://localhost:8000
-```
+前端使用 GitHub Actions 自动部署。
 
-## REST API
-
-### 上传并解析简历
-
-```http
-POST /api/resumes/parse
-Content-Type: multipart/form-data
-Authorization: Bearer <token>
-```
-
-字段：
-
-```txt
-file: resume.pdf
-```
-
-### 获取简历解析结果
-
-```http
-GET /api/resumes/{resume_id}
-Authorization: Bearer <token>
-```
-
-### 简历匹配岗位 JD
-
-```http
-POST /api/resumes/{resume_id}/match
-Content-Type: application/json
-Authorization: Bearer <token>
-```
-
-请求体：
-
-```json
-{
-  "job_source": {
-    "source_type": "text",
-    "content": "招聘 Python 后端工程师，要求熟悉 FastAPI、Redis..."
-  }
-}
-```
-
-返回中包含：
-
-- `score`：综合分数
-- `radar_scores`：雷达图五维评分
-- `matched_keywords`：已匹配关键词
-- `missing_keywords`：缺失技能 / 关键词
-- `semantic_matches`：AI 逐条语义匹配证据
-- `missing_skill_details`：缺失技能、重要性和原因
-- `ai_summary`：分析总结
-
-### 用户注册
-
-```http
-POST /api/auth/register
-Content-Type: application/json
-```
-
-```json
-{
-  "username": "recruiter",
-  "password": "123456"
-}
-```
-
-### 用户登录
-
-```http
-POST /api/auth/login
-Content-Type: application/json
-```
-
-返回 `access_token`，前端会保存到 `localStorage` 并自动带到后续请求。
-
-### 查看匹配历史
-
-```http
-GET /api/history
-Authorization: Bearer <token>
-```
-
-返回当前用户的历史记录：
-
-```json
-[
-  {
-    "candidate_name": "张三",
-    "contact": "13800000000 / test@example.com",
-    "job_title": "Python 后端工程师",
-    "score": 86
-  }
-]
-```
-
-## 评分标准
-
-系统采用混合评分：
-
-```txt
-最终维度分 = 规则基础分 * 40% + AI 语义评分 * 60%
-综合分 =
-技能匹配 * 35%
-+ 经验相关 * 25%
-+ 项目相关 * 20%
-+ 学历匹配 * 10%
-+ 关键词覆盖 * 10%
-```
-
-无 AI API Key 或 AI 调用失败时，系统自动使用规则兜底。
-
-接入 AI 后，模型会按固定 JSON Rubric 判断：
-
-- JD 中每条要求是否被简历证据满足
-- “AI API”“大模型接口”“LLM API”等语义相近表达是否归一到同一能力项
-- 匹配等级：强匹配、部分匹配、弱匹配、未匹配
-- 缺失技能的重要性和原因
-- 多维度评分和中文总结
-
-## JD URL 功能预留
-
-接口已经支持结构：
-
-```json
-{
-  "job_source": {
-    "source_type": "url",
-    "content": "https://example.com/jobs/123"
-  }
-}
-```
-
-MVP 阶段返回 `501 Not Implemented`。后续可以在 `backend/app/services/job_source.py` 中增加网页抓取和正文抽取逻辑，推荐依赖：
-
-- `httpx`
-- `beautifulsoup4`
-- `trafilatura`
-
-## 阿里云函数计算 FC 部署建议
-
-推荐使用函数计算 Web 函数或自定义运行时部署 FastAPI。
-
-部署要点：
-
-1. 上传 `backend` 目录。
-2. 安装 `requirements.txt` 依赖。
-3. 启动命令使用：
-
-```bash
-uvicorn app.main:app --host 0.0.0.0 --port 9000
-```
-
-4. 配置环境变量。
-5. 将前端 `VITE_API_BASE_URL` 改为 FC 公网访问地址。
-
-## GitHub Pages 部署前端
-
-项目已经包含 GitHub Actions 配置：
+工作流文件：
 
 ```txt
 .github/workflows/deploy-frontend.yml
 ```
 
-当前前端生产 API 地址配置为：
-
-```txt
-https://resume-i-system-nzvfhfnbdd.cn-hangzhou.fcapp.run
-```
-
-部署步骤：
-
-1. 创建 GitHub 仓库并推送本项目到 `main` 分支。
-2. 进入仓库 `Settings -> Pages`。
-3. `Source` 选择 `GitHub Actions`。
-4. 推送后等待 `Deploy Frontend to GitHub Pages` workflow 完成。
-5. 得到类似下面的前端地址：
-
-```txt
-https://你的GitHub用户名.github.io/resume-ai-system/
-```
-
-6. 回到阿里云函数计算 FC，把环境变量 `ALLOWED_ORIGINS` 改为 GitHub Pages 的 Origin：
+构建时注入后端地址：
 
 ```env
-ALLOWED_ORIGINS=https://你的GitHub用户名.github.io
+VITE_API_BASE_URL=https://resume-i-system-nzvfhfnbdd.cn-hangzhou.fcapp.run
 ```
 
-浏览器的 Origin 通常只包含协议和域名，不包含仓库路径。
+GitHub Pages 地址：
 
-如果需要手动本地构建：
-
-```bash
-cd frontend
-npm install
-npm run build
+```txt
+https://boyazhang54.github.io/AI_powered_resume_system/
 ```
 
-将 `frontend/dist` 部署到 GitHub Pages。也可以配置 GitHub Actions 自动部署。
+部署后，需要在阿里云 FC 中配置 CORS：
 
-## 后续升级方向
+```env
+ALLOWED_ORIGINS=https://boyazhang54.github.io
+```
 
-- 接入真实大模型进行更精确的信息抽取和评分
-- JD URL 抓取与正文提取
-- Redis 缓存
-- OCR 支持扫描版 PDF
-- 批量简历上传与排序
-- 导出分析报告
+## 使用说明
+
+1. 打开前端页面。
+2. 注册或登录账号。
+3. 上传单个 PDF 简历。
+4. 等待系统解析简历并展示结构化信息。
+5. 粘贴岗位 JD 文本。
+6. 点击“开始匹配”。
+7. 查看综合匹配分、雷达图、缺失技能和语义匹配证据。
+8. 进入“历史记录”查看过往匹配结果。
+
+## 安全说明
+
+- `.env`、数据库文件、缓存文件、依赖目录不会提交到 GitHub。
+- API Key 通过部署平台环境变量配置。
+- 前端不会保存阿里云 AccessKey。
+- 登录 token 存储在浏览器 `localStorage`，适合 MVP；生产环境可升级为 HttpOnly Cookie。
+
+## 后续优化方向
+
+- 使用 RDS 替代 SQLite，提升持久化能力
+- 接入 Redis / Tair 缓存
+- 支持扫描版 PDF OCR
+- 支持批量简历分析和排序
+- 支持 JD URL 自动抓取
+- 支持导出 PDF / Word 分析报告
